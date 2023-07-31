@@ -1,0 +1,23 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace DocumentApi
+{
+    public class Document
+    {
+        [Key] public int ID { get; set; }
+        public string DocType { get; set; }
+        public string DocReference { get; set; }
+        public string CreatedBy { get; set; }
+        public DateTime CreatedTime { get; set; }
+        public DateTime ModifiedTime { get; set; }
+        public List<Docproperty> docproperty { get; set; } 
+    }
+
+    public class Docproperty
+    {
+        [Key] public int ID { set; get; }
+        public int DocID { set; get; }
+        public string PropertyName { get; set; }
+        public string PropertyValue { get; set; }
+    }
+}
