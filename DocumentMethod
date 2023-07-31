@@ -1,0 +1,106 @@
+using Dapper;
+using DocumentApi;
+using Microsoft.AspNetCore.Mvc;
+using System.Data.SqlClient;
+
+namespace DapperApi
+{
+    public class DocumentMethod
+    {
+        public ICollection<Document> get(string con)
+        {
+            using (SqlConnection connection = new SqlConnection(con))
+            {
+                string query = "select * from Documents";
+                var document = connection.Query<Document>(query).ToList();
+                foreach (var docpropert in document)
+                {
+                    string docpropquery = "select * from DocProperties where DocID = @id;";
+                    var docprop = connection.Query<Docproperty>(docpropquery, new { id = docpropert.ID }).ToList();
+                    docpropert.docproperty = docprop;
+                }
+                return document;
+            }
+
+        }
+
+        public Document getbyid(string con, int id)
+        {
+            using (var connection = new SqlConnection(con))
+            {
+                string query = "select * from Documents where ID = @ID";
+                var document = connection.QuerySingleOrDefault<Document>(query, new { ID = id });
+                if (document != null)
+                {
+                    string query2 = "select * from DocProperties where DocID = @ID";
+                    var docprop = connection.Query<Docproperty>(query2, new { ID = id }).ToList();
+                    document.docproperty = docprop;
+                }
+
+                return document;
+            }
+        }
+
+        public string delete(string con, int id)
+        {
+            using (var connection = new SqlConnection(con))
+            {
+                string query = "delete from DocProperties where DocID = @id";
+                var del = connection.Execute(query, new { ID = id });
+                string query2 = "delete from Documents where ID = @id";
+                var del2 = connection.Execute(query2, new { ID = id });
+                if (del == 0 && del2 == 0)
+                {
+                    return "Not Found";
+                }
+                return $" Deleted the Document with ID : {id}";
+            }
+        }
+
+        public string Create(string con, Document document)
+        {
+            using (var connection = new SqlConnection(con))
+            {
+
+                string query = "insert into Documents (DocType, DocReference, CreatedBy, CreatedTime, ModifiedTime) " +
+                                                                    "values (@DT, @DR, @CB, @CT , @MT); select scope_identity();";
+                var doc = connection.ExecuteScalar(query, new
+                {
+                    DT = document.DocType,
+                    DR = document.DocReference,
+                    CB = document.CreatedBy,
+                    CT = document.CreatedTime,
+                    MT = document.ModifiedTime
+                });
+                Console.WriteLine(doc.ToString());
+                string query2 = "insert into DocProperties (DocID, PropertyName , PropertyValue ) values (@ID, @PN, @PV);";
+                foreach (Docproperty docprop in document.docproperty)
+                {
+                    var docprp = connection.Execute(query2, new { ID = doc, PN = docprop.PropertyName, PV = docprop.PropertyValue });
+                }
+
+                return $"Document added Successfuly";
+            }
+        }
+
+        public string update(string con , Docproperty docproper)
+        {
+            using (var connection = new SqlConnection(con))
+            {
+
+                string query1 = "select count(*) from Documents where ID = id;";
+                var doc = connection.QuerySingle<int>(query1, new { id = docproper.DocID });
+                Console.WriteLine(doc);
+                if (doc != null)
+                {
+                    string query = "insert into DocProperties(DocID, PropertyName , PropertyValue) values (@id, @PN , @PV) ;";
+                    var docproperty = connection.ExecuteScalar(query, new { id = docproper.DocID, PN = docproper.PropertyName, PV = docproper.PropertyValue });
+                    return $"DocProperties in ID : {docproper.DocID} updated Successfully";
+                }
+                else { return ($"ID {docproper.DocID} not found"); }
+            }
+        }
+    }
+}
+
+
